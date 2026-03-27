@@ -1,11 +1,25 @@
 import xml.etree.ElementTree as ET
 import json
+import re
 from itertools import combinations
 from pathlib import Path
 
 
+def load_and_clean_xml(path: str):
+    """
+    XML 1.0에서 허용되지 않는 제어문자를 제거한 뒤 파싱한다.
+    """
+    text = Path(path).read_text(encoding="utf-8", errors="replace")
+
+    # XML 1.0에서 허용되지 않는 제어문자 제거
+    # 허용 안 되는 범위: 0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F
+    text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F]', '', text)
+
+    return ET.ElementTree(ET.fromstring(text))
+
+
 def parse_eagle_sch(path: str):
-    tree = ET.parse(path)
+    tree = load_and_clean_xml(path)
     root = tree.getroot()
 
     schematic = root.find("./drawing/schematic")
@@ -52,6 +66,7 @@ def parse_eagle_sch(path: str):
             })
 
     return {
+        "source_file": Path(path).name,
         "parts": list(parts.values()),
         "nets": nets
     }
